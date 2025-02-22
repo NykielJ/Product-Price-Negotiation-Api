@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "/GXWF+iljDpapDaRXu9wh+xnDslFutlD+iCl2m+EqWI=",
+  "Source": "ProductPriceNegotiationApi",
+  "BasePath": "_content/ProductPriceNegotiationApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
