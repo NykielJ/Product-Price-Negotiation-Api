@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductPriceNegotiationApi.Data;
 using ProductPriceNegotiationApi.Services;
+using ProductPriceNegotiationApi.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=negotiation.db"));
 
 // DI container
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<INegotiationRepository, NegotiationRepository>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<NegotiationService>();
 

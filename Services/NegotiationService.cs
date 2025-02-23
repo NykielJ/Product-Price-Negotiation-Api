@@ -1,23 +1,24 @@
-using ProductPriceNegotiationApi.Data;
 using ProductPriceNegotiationApi.Models;
+using ProductPriceNegotiationApi.Repositories;
 using System;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace ProductPriceNegotiationApi.Services
 {
     public class NegotiationService
     {
-        private readonly AppDbContext _context;
+        private readonly INegotiationRepository _negotiationRepository;
+        private readonly IProductRepository _productRepository;
 
-        public NegotiationService(AppDbContext context)
+        public NegotiationService(INegotiationRepository negotiationRepository, IProductRepository productRepository)
         {
-            _context = context;
+            _negotiationRepository = negotiationRepository;
+            _productRepository = productRepository;
         }
 
         public async Task StartNegotiation(int productId, decimal proposedPrice)
         {
-            var product = await _context.Products.FindAsync(productId);
+            var product = await _productRepository.GetByIdAsync(productId);
             if (product == null)
                 throw new ArgumentException("Product not found.");
 
@@ -32,13 +33,12 @@ namespace ProductPriceNegotiationApi.Services
                 Attempts = 0
             };
 
-            _context.Negotiations.Add(negotiation);
-            await _context.SaveChangesAsync();
+            await _negotiationRepository.AddAsync(negotiation);
         }
 
         public async Task RespondToNegotiation(int productId, bool accept)
         {
-            var negotiation = await _context.Negotiations.FirstOrDefaultAsync(n => n.ProductId == productId);
+            var negotiation = await _negotiationRepository.GetByProductIdAsync(productId);
             if (negotiation == null)
                 throw new ArgumentException("Negotiation not found.");
 
@@ -55,7 +55,7 @@ namespace ProductPriceNegotiationApi.Services
                 negotiation.LastAttemptDate = DateTime.Now;
             }
 
-            await _context.SaveChangesAsync();
+            await _negotiationRepository.AddAsync(negotiation);
         }
     }
 }

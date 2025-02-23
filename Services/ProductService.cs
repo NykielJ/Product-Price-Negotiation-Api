@@ -1,18 +1,17 @@
-using ProductPriceNegotiationApi.Data;
 using ProductPriceNegotiationApi.Models;
+using ProductPriceNegotiationApi.Repositories;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace ProductPriceNegotiationApi.Services
 {
     public class ProductService
     {
-        private readonly AppDbContext _context;
+        private readonly IProductRepository _productRepository;
 
-        public ProductService(AppDbContext context)
+        public ProductService(IProductRepository productRepository)
         {
-            _context = context;
+            _productRepository = productRepository;
         }
 
         public async Task AddProduct(Product product)
@@ -23,18 +22,17 @@ namespace ProductPriceNegotiationApi.Services
             if (product.Price <= 0)
                 throw new ArgumentException("Price must be greater than 0.");
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            await _productRepository.AddAsync(product);
         }
 
         public async Task<Product?> GetProduct(int id)
         {
-            return await _context.Products.FindAsync(id);
+            return await _productRepository.GetByIdAsync(id);
         }
 
         public async Task<IEnumerable<Product>> GetAllProducts()
         {
-            return await _context.Products.ToListAsync();
+            return await _productRepository.GetAllAsync();
         }
     }
 }
