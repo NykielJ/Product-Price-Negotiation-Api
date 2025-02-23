@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using ProductPriceNegotiationApi.Data;
 using ProductPriceNegotiationApi.Services;
 using ProductPriceNegotiationApi.Repositories;
+using ProductPriceNegotiationApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
+
+app.UseMiddleware<ErrorHandlingMiddleware>();
 
 // If HTTP failed, remove it > dotnet clean > dotnet build > add it > dotnet clean then run 
 app.UseRouting();

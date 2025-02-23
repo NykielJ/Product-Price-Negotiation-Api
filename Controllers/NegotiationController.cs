@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ProductPriceNegotiationApi.DTOs;
-using ProductPriceNegotiationApi.Services;
-using ProductPriceNegotiationApi.Utilities;
 using ProductPriceNegotiationApi.Models;
+using ProductPriceNegotiationApi.Services;
 
 namespace ProductPriceNegotiationApi.Controllers
 {
@@ -18,32 +16,39 @@ namespace ProductPriceNegotiationApi.Controllers
         }
 
         [HttpPost("{productId}")]
-        public IActionResult StartNegotiation(int productId, [FromBody] NegotiationDto negotiationDto)
+        public async Task<IActionResult> StartNegotiation(int productId, [FromBody] Negotiation negotiation)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
-                ValidationHelper.ValidateProposedPrice(negotiationDto.ProposedPrice);
-                
-                _negotiationService.StartNegotiation(productId, negotiationDto.ProposedPrice);
-                return Ok();
+                await _negotiationService.StartNegotiation(productId, negotiation.ProposedPrice);
+                return Ok(new { message = "Negotiation started successfully." });
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return NotFound(new { message = ex.Message });
             }
         }
 
         [HttpPut("{productId}")]
-        public IActionResult RespondToNegotiation(int productId, [FromQuery] bool accept)
+        public async Task<IActionResult> RespondToNegotiation(int productId, [FromQuery] bool accept)
         {
             try
             {
-                _negotiationService.RespondToNegotiation(productId, accept);
-                return Ok();
+                await _negotiationService.RespondToNegotiation(productId, accept);
+                return Ok(new { message = accept ? "Negotiation accepted." : "Negotiation rejected." });
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
             }
         }
     }

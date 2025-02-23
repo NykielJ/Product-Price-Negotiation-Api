@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ProductPriceNegotiationApi.DTOs;
-using ProductPriceNegotiationApi.Services;
-using ProductPriceNegotiationApi.Utilities;
 using ProductPriceNegotiationApi.Models;
+using ProductPriceNegotiationApi.Services;
 
 namespace ProductPriceNegotiationApi.Controllers
 {
@@ -18,42 +16,33 @@ namespace ProductPriceNegotiationApi.Controllers
         }
 
         [HttpPost]
-        public IActionResult AddProduct([FromBody] ProductDto productDto)
+        public async Task<IActionResult> AddProduct([FromBody] Product product)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                ValidationHelper.ValidateProductName(productDto.Name);
-                ValidationHelper.ValidateProductPrice(productDto.Price);
-
-                var product = new Product
-                {
-                    Name = productDto.Name,
-                    Price = productDto.Price
-                };
-
-                _productService.AddProduct(product);
-                return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+                return BadRequest(ModelState);
             }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            await _productService.AddProduct(product);
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Product> GetProduct(int id)
+        public async Task<IActionResult> GetProduct(int id)
         {
-            var product = _productService.GetProduct(id);
+            var product = await _productService.GetProduct(id);
             if (product == null)
-                return NotFound();
+            {
+                return NotFound(new { message = "Product not found." });
+            }
 
             return Ok(product);
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Product>> GetAllProducts()
+        public async Task<IActionResult> GetAllProducts()
         {
-            return Ok(_productService.GetAllProducts());
+            return Ok(await _productService.GetAllProducts());
         }
     }
 }
