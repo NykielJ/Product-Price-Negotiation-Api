@@ -1,23 +1,23 @@
 using ProductPriceNegotiationApi.Data;
 using ProductPriceNegotiationApi.Models;
 using System;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace ProductPriceNegotiationApi.Services
 {
     public class NegotiationService
     {
-        private readonly InMemoryNegotiationRepository _negotiationRepository;
-        private readonly InMemoryProductRepository _productRepository;
+        private readonly AppDbContext _context;
 
-        public NegotiationService(InMemoryNegotiationRepository negotiationRepository, InMemoryProductRepository productRepository)
+        public NegotiationService(AppDbContext context)
         {
-            _negotiationRepository = negotiationRepository;
-            _productRepository = productRepository;
+            _context = context;
         }
 
-        public void StartNegotiation(int productId, decimal proposedPrice)
+        public async Task StartNegotiation(int productId, decimal proposedPrice)
         {
-            var product = _productRepository.Get(productId);
+            var product = await _context.Products.FindAsync(productId);
             if (product == null)
                 throw new ArgumentException("Product not found.");
 
@@ -32,12 +32,13 @@ namespace ProductPriceNegotiationApi.Services
                 Attempts = 0
             };
 
-            _negotiationRepository.Add(negotiation);
+            _context.Negotiations.Add(negotiation);
+            await _context.SaveChangesAsync();
         }
 
-        public void RespondToNegotiation(int productId, bool accept)
+        public async Task RespondToNegotiation(int productId, bool accept)
         {
-            var negotiation = _negotiationRepository.GetByProductId(productId);
+            var negotiation = await _context.Negotiations.FirstOrDefaultAsync(n => n.ProductId == productId);
             if (negotiation == null)
                 throw new ArgumentException("Negotiation not found.");
 
@@ -52,12 +53,9 @@ namespace ProductPriceNegotiationApi.Services
 
                 negotiation.Attempts++;
                 negotiation.LastAttemptDate = DateTime.Now;
-
-                if (negotiation.LastAttemptDate.HasValue && (DateTime.Now - negotiation.LastAttemptDate.Value).Days > 7)
-                {
-                    throw new InvalidOperationException("Negotiation canceled after 7 days without new proposal.");
-                }
             }
+
+            await _context.SaveChangesAsync();
         }
     }
 }
