@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductPriceNegotiationApi.Models;
 using ProductPriceNegotiationApi.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace ProductPriceNegotiationApi.Controllers
 {
@@ -16,7 +19,7 @@ namespace ProductPriceNegotiationApi.Controllers
         }
 
         [HttpPost("{productId}")]
-        public async Task<IActionResult> StartNegotiation(int productId, [FromBody] Negotiation negotiation)
+        public async Task<IActionResult> StartNegotiation(int productId, [FromBody] CreateNegotiationRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -25,31 +28,59 @@ namespace ProductPriceNegotiationApi.Controllers
 
             try
             {
-                await _negotiationService.StartNegotiation(productId, negotiation.ProposedPrice);
-                return Ok(new { message = "Negotiation started successfully." });
+                var negotiationId = await _negotiationService.StartNegotiation(productId, request.ProposedPrice);
+                return CreatedAtAction(nameof(GetNegotiation), new { negotiationId }, new { message = "Negotiation submitted successfully.", negotiationId });
             }
-            catch (ArgumentException ex)
+            catch (Exception ex)
             {
-                return NotFound(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        [HttpPut("{productId}")]
-        public async Task<IActionResult> RespondToNegotiation(int productId, [FromQuery] bool accept)
+        [HttpPut("{negotiationId}/update")]
+        public async Task<IActionResult> UpdateNegotiation(int negotiationId, [FromBody] CreateNegotiationRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                await _negotiationService.UpdateNegotiation(negotiationId, request.ProposedPrice);
+                return Ok(new { message = "Negotiation updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPut("{negotiationId}/response")]
+        public async Task<IActionResult> RespondToNegotiation(int negotiationId, [FromQuery] bool accept)
         {
             try
             {
-                await _negotiationService.RespondToNegotiation(productId, accept);
+                await _negotiationService.RespondToNegotiation(negotiationId, accept);
                 return Ok(new { message = accept ? "Negotiation accepted." : "Negotiation rejected." });
             }
-            catch (ArgumentException ex)
+            catch (Exception ex)
             {
-                return NotFound(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
             }
-            catch (InvalidOperationException ex)
+        }
+
+        [HttpGet("{negotiationId}")]
+        public async Task<IActionResult> GetNegotiation(int negotiationId)
+        {
+            var negotiation = await _negotiationService.GetNegotiationById(negotiationId);
+            if (negotiation == null)
             {
-                return Conflict(new { message = ex.Message });
+                return NotFound(new { message = "Negotiation not found." });
             }
+
+            return Ok(negotiation);
         }
     }
 }

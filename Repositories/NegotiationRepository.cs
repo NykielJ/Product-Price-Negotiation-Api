@@ -20,6 +20,11 @@ namespace ProductPriceNegotiationApi.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task<Negotiation?> GetByIdAsync(int negotiationId)
+        {
+            return await _context.Negotiations.FindAsync(negotiationId);
+        }
+
         public async Task<Negotiation?> GetByProductIdAsync(int productId)
         {
             return await _context.Negotiations.FirstOrDefaultAsync(n => n.ProductId == productId);
@@ -28,6 +33,12 @@ namespace ProductPriceNegotiationApi.Repositories
         public async Task RemoveAsync(Negotiation negotiation)
         {
             _context.Negotiations.Remove(negotiation);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Negotiation negotiation)
+        {
+            _context.Negotiations.Update(negotiation);
             await _context.SaveChangesAsync();
         }
     }
