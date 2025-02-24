@@ -12,86 +12,68 @@ using ProductPriceNegotiationApi.Services;
 using ProductPriceNegotiationApi.Repositories;
 using ProductPriceNegotiationApi.Middleware;
 
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=negotiation.db"));
-
-var key = Encoding.UTF8.GetBytes("4L@Rz6YqQ#tT8VpN!x2M$CdF&J7HwPZB`");
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.RequireHttpsMetadata = false;
-        options.SaveToken = true;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
-// DI container
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<INegotiationRepository, NegotiationRepository>();
-builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<NegotiationService>();
-
-//Controllers
-builder.Services.AddControllers();
-
-// Swagger + JWT konfiguracja
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+public class Program
 {
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    public static void Main(string[] args)
     {
-        Description = "Podaj token JWT w formacie: Bearer {TOKEN}",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
+        var app = CreateApp(args);
+        app.Run();
+    }
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    public static WebApplication CreateApp(string[] args)
     {
-        {
-            new OpenApiSecurityScheme
+        var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite("Data Source=negotiation.db"));
+
+        var key = Encoding.UTF8.GetBytes("4L@Rz6YqQ#tT8VpN!x2M$CdF&J7HwPZB`");
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
             {
-                Reference = new OpenApiReference
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+        builder.Services.AddScoped<IProductRepository, ProductRepository>();
+        builder.Services.AddScoped<INegotiationRepository, NegotiationRepository>();
+        builder.Services.AddScoped<ProductService>();
+        builder.Services.AddScoped<NegotiationService>();
+
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        var app = builder.Build();
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
         }
-    });
-});
 
-var app = builder.Build();
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+        }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+        app.UseMiddleware<ErrorHandlingMiddleware>();
+
+        app.UseRouting();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+
+        return app;
+    }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
-
-app.UseMiddleware<ErrorHandlingMiddleware>();
-
-// If HTTP failed, remove it > dotnet clean > dotnet build > add it > dotnet clean then run 
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
